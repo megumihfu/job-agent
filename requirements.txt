@@ -1,0 +1,6 @@
+crewai
+langchain-openai
+python-dotenv
+pandas
+openpyxl
+linkedin-jobs-api-py
