@@ -1,5 +1,4 @@
-from crewai import Agent, Task, Crew, LLM
-from langchain_openai import ChatOpenAI
+from crewai import LLM
 from src.config import CHATANYWHERE_API_KEY
 from src.tools.linkedin_tool import LinkedInTool
 from src.tools.excel_tool import ExcelExportTool
@@ -28,16 +27,19 @@ def run_job_agent():
     for job in job_offers:
         prompt = f"""
             ROLE: Expert IT Recruitment Screener.
-            CONTEXT: The candidate is looking for Backend/DevOps roles in France OR Germany.
+            CONTEXT: The candidate is looking for Backend/Cloud roles in France OR Germany.
+            BENEFIT OF THE DOUBT: If the job description is missing or empty, but the JOB TITLE matches (DevOps, SRE, Cloud, Backend, Software Engineer) keep it.
             
             FILTERS:
-            1. DEVELOPER STACK: Must be related to Python, Java, or Kotlin. 
+            1. STACK: 
+                - for backend/fullstack/software roles: must include either Python, Java, or Kotlin. 
+                - for DevOps/SRE/Cloud: DO NOT reject if a langage isnt mentioned. 
             2. TECH FOCUS: REJECT non-IT jobs.
             3. EXPERIENCE: Entry-level to max 4 years.
-            4. SECTORS: REJECT Banking, Insurance, Defense.
+            4. SECTOR: Only reject if the COMPANY itself is a Bank, Insurance, or Defense firm.
             5. CONTRACT: permanent or temporary. REJECT intern/apprentice & contract.
             6. LOCATION: The candidate accepts ALL cities in {job.get('target_country')}. 
-            7. UNKNOWN: If Salary/Exp is missing, assume YES.
+            7. FINAL DECISION: If you are unsure or data is missing, the default answer is YES.
 
             DATA:
             - Job: {job.get('position')} @ {job.get('company')}
@@ -46,7 +48,7 @@ def run_job_agent():
             - Description: {job.get('description', 'N/A')[:600]}
 
             OUTPUT:
-            YES or NO - [Explain why 'NO' in a quick note]
+            YES or NO - [Explain why 'NO' with key words]
         """
 
         response = llm.call(prompt)
