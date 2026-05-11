@@ -1,0 +1,52 @@
+name: Daily job search agent
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Job Agent
+        env:
+          CHATANYWHERE_API_KEY: ${{ secrets.CHATANYWHERE_API_KEY }}
+        run: python main.py
+
+      - name: Find latest Excel file
+        id: find_excel
+        run: |
+          LATEST_FILE=$(ls -t outputs/*.xlsx | head -1)
+          echo "file=$LATEST_FILE" >> $GITHUB_OUTPUT
+          echo "filename=$(basename $LATEST_FILE)" >> $GITHUB_OUTPUT
+
+      - name: Send Mail
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Your Daily Job Report - ${{ format('{0}', github.event.head_commit.timestamp) }}"
+          body: |
+            Your daily job search is complete!
+                        
+            Attached: ${{ steps.find_excel.outputs.filename }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Job Agent <${{ secrets.MAIL_USERNAME }}>"
+          attachments: ${{ steps.find_excel.outputs.file }}
