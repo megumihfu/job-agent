@@ -21,6 +21,8 @@ class ExcelExportTool(BaseTool):
         try:
             jobs = json.loads(jobs_data)
         except:
+            with open("outputs/empty_run.txt", "w") as f:
+                f.write("No jobs found or invalid data")
             return "please pass job data as JSON"
         
         if not jobs:

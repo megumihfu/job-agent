@@ -1,5 +1,4 @@
-from crewai import Agent, Task, Crew, LLM
-from langchain_openai import ChatOpenAI
+from crewai import LLM
 from src.config import CHATANYWHERE_API_KEY
 from src.tools.linkedin_tool import LinkedInTool
 from src.tools.excel_tool import ExcelExportTool
@@ -20,24 +19,32 @@ excel_tool = ExcelExportTool()
 
 def run_job_agent():
     print("Starting job agent...")
-    
-    job_offers = linkedin_tool._run()
+
+    try:
+        job_offers = linkedin_tool._run()
+    except Exception as e:
+        print(f"Error during Linkedin search: {e}")
+        return
 
     valid_jobs = []
 
-    for job in job_offers:
-        prompt = f"""
+    try:
+        for job in job_offers:
+            prompt = f"""
             ROLE: Expert IT Recruitment Screener.
-            CONTEXT: The candidate is looking for Backend/DevOps roles in France OR Germany.
+            CONTEXT: The candidate is looking for Backend/Cloud roles in France OR Germany.
+            BENEFIT OF THE DOUBT: If the job description is missing or empty, but the JOB TITLE matches (DevOps, SRE, Cloud, Backend, Software Engineer) keep it.
             
             FILTERS:
-            1. DEVELOPER STACK: Must be related to Python, Java, or Kotlin. 
+            1. STACK: 
+                - for backend/fullstack/software roles: must include either Python, Java, or Kotlin. 
+                - for DevOps/SRE/Cloud: DO NOT reject if a langage isnt mentioned. 
             2. TECH FOCUS: REJECT non-IT jobs.
-            3. EXPERIENCE: Entry-level to max 4 years.
-            4. SECTORS: REJECT Banking, Insurance, Defense.
+            3. EXPERIENCE: Entry-level to max 4 years. If the title has "Senior" or "Lead", REJECT.
+            4. SECTOR: Only reject if the COMPANY itself is a Bank, Insurance, or Defense firm.
             5. CONTRACT: permanent or temporary. REJECT intern/apprentice & contract.
             6. LOCATION: The candidate accepts ALL cities in {job.get('target_country')}. 
-            7. UNKNOWN: If Salary/Exp is missing, assume YES.
+            7. FINAL DECISION: If you are unsure or data is missing, the default answer is YES.
 
             DATA:
             - Job: {job.get('position')} @ {job.get('company')}
@@ -46,23 +53,33 @@ def run_job_agent():
             - Description: {job.get('description', 'N/A')[:600]}
 
             OUTPUT:
-            YES or NO - [Explain why 'NO' in a quick note]
+            YES or NO - [Explain why 'NO' with key words]
         """
 
-        response = llm.call(prompt)
-        print(f"{job.get('position', '')[:40]}... {response.strip()}")
+            try:
+                response = llm.call(prompt)
+                print(f"{job.get('position', '')[:40]}... {response.strip()}")
 
-        if "YES" in response.upper():
-            valid_jobs.append(job)
+                if "YES" in response.upper():
+                    valid_jobs.append(job)
+                    
+            except Exception as e:
+                error_msg = str(e).lower()
+                if any(x in error_msg for x in ["429", "limited", "TOO_MANY_REQUESTS"]):
+                    print("\nAPI quota exceeded. Saving progress and exiting...")
+                    break
+                else:
+                    print(f"Error for this job '{job.get('position', '')}': {e}")
+                    continue
+    
+    except Exception as e:
+        print(f"Unexpected crash: {e}")
 
-    if valid_jobs:
-        print(f"{len(valid_jobs)} valid offers. Exporting to excel...")
+    finally:
+        print(f"\nClosing agent. Jobs validated: {len(valid_jobs)}")
         jobs_json = json.dumps(valid_jobs, default=str)
         result = excel_tool._run(jobs_json)
         print(result)
-    else:
-        print("No job offer found.")
-
 
 if __name__ == "__main__":
     run_job_agent()
