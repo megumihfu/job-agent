@@ -1,4 +1,4 @@
-# AI-Powered Job Hunter
+# AI-Powered Job Search Agent
 
 An intelligent agent designed to automate the search and filtering of DevOps/Cloud & Backend Engineer roles. This project specifically targets the French and German markets, with a focus on architectural clean code and cost-optimized AI processing.
 
@@ -9,6 +9,8 @@ This project demonstrates full-stack automation skills, integrating external API
 ### **Logic**
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 ### **AI**
 ![CrewAI](https://img.shields.io/badge/CrewAI-000000?style=for-the-badge&logo=openai&logoColor=white)
@@ -62,6 +64,15 @@ Make sure you have installed:
   ```bash
   python main.py
   ```
+
+## **Quality Assurance**
+
+### **Automated testing**
+The project includes a comprehensive test suite using `pytest`. It will be run every time a new modification is added to main branch. If you want to try it locally:
+*   **Run tests locally**:
+    ```bash
+    pytest
+    ```
 
 ### **Architecture**
 The project follows a modular, tool-based architecture:
