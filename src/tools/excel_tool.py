@@ -43,6 +43,8 @@ class ExcelExportTool(BaseTool):
         for col in required_columns:
             if col not in df.columns:
                 df[col] = 'N/A'
+            else:
+                df[col] = df[col].fillna('N/A').replace('', 'N/A')
 
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
