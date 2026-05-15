@@ -6,6 +6,7 @@ import json
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.formatting.rule import CellIsRule
 
 class ExcelExportTool(BaseTool):
     name: str = "Excel export tool"
@@ -31,22 +32,30 @@ class ExcelExportTool(BaseTool):
         df = pd.DataFrame(jobs)
         df.columns = [c.lower() for c in df.columns] 
         df = df.loc[:, ~df.columns.duplicated()]
-        df = df.rename(columns={
-                'position': 'title',
-                'jobUrl': 'url'
-            })
+
+        if 'joburl' in df.columns and 'url' not in df.columns:
+            df['url'] = df['joburl']
+
+        if 'target_country' in df.columns and 'country' not in df.columns:
+            df['country'] = df['target_country']
+
+        if 'position' in df.columns and 'title' not in df.columns:
+            df['title'] = df['position']
+
+        cols_to_drop = ['joburl', 'target_country', 'position', 'companylogo', 'agotime', 'date']
+        df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
         if 'status' not in df.columns:
             df.insert(0, 'status', 'Not applied')
         
-        required_columns = ['title', 'company', 'location', 'country', 'salary', 'url']
+        required_columns = ['status', 'title', 'company', 'location', 'country', 'salary', 'url']
         for col in required_columns:
             if col not in df.columns:
                 df[col] = 'N/A'
-            else:
-                df[col] = df[col].fillna('N/A').replace('', 'N/A')
 
-        
+        df = df[required_columns]
+        df = df.fillna('N/A').replace('', 'N/A')
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"outputs/job_offers_{timestamp}.xlsx"
         
@@ -78,33 +87,32 @@ class ExcelExportTool(BaseTool):
             status_col_letter = 'A'
         
         dv = DataValidation(type="list", formula1='"Not applied, Applied, In progress, Interview, Rejected"')
+        ws.add_data_validation(dv)
+
+        status_range = f'{status_col_letter}2:{status_col_letter}{ws.max_row}'
         
+        rules = {
+            '"Not applied"': red_fill,
+            '"Applied"': green_fill,
+            '"In progress"': yellow_fill,
+            '"Interview"': yellow_fill,
+            '"Rejected"': red_fill
+        }
+
+        for formula, fill in rules.items():
+            ws.conditional_formatting.add(
+                status_range,
+                CellIsRule(operator='equal', formula=[formula], fill=fill)
+            )
+
         for cell in ws[1]:
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
         
-        status_values = {
-            'Not applied': red_fill,
-            'Applied': green_fill,
-            'In progress': yellow_fill,
-            'Interview': yellow_fill,
-            'Rejected': red_fill
-        }
-        
         for row_idx in range(2, ws.max_row + 1):
-            status_cell = ws[f'{status_col_letter}{row_idx}']
-            status_value = status_cell.value
-            
-            for key, fill_color in status_values.items():
-                if status_value and key in str(status_value):
-                    status_cell.fill = fill_color
-                    break
-            
-            dv.add(status_cell) 
-        
-        ws.add_data_validation(dv)
-        
+            dv.add(ws[f'{status_col_letter}{row_idx}']) 
+
         for col in ws.columns:
             max_length = 0
             col_letter = col[0].column_letter

@@ -1,6 +1,6 @@
 from linkedin_jobs_api import query
 from crewai.tools import BaseTool
-import time
+import time, re
 
 class LinkedInTool(BaseTool):
     name: str = "Linkedin job search"
@@ -49,8 +49,10 @@ class LinkedInTool(BaseTool):
 
         for job in all_jobs:
             url = job.get('jobUrl', '')
+            match = re.search(r'/view/(\d+)', url)
+            job_id = match.group(1) if match else url
             if url and url not in unique_jobs:
-                unique_jobs[url] = job
+                unique_jobs[job_id] = job
         
         final_jobs = list(unique_jobs.values())
 
