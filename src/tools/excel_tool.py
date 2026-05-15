@@ -32,21 +32,30 @@ class ExcelExportTool(BaseTool):
         df = pd.DataFrame(jobs)
         df.columns = [c.lower() for c in df.columns] 
         df = df.loc[:, ~df.columns.duplicated()]
-        df = df.rename(columns={
-                'position': 'title',
-                'jobUrl': 'url'
-            })
+
+        if 'joburl' in df.columns and 'url' not in df.columns:
+            df['url'] = df['joburl']
+
+        if 'target_country' in df.columns and 'country' not in df.columns:
+            df['country'] = df['target_country']
+
+        if 'position' in df.columns and 'title' not in df.columns:
+            df['title'] = df['position']
+
+        cols_to_drop = ['joburl', 'target_country', 'position', 'companylogo', 'agotime', 'date']
+        df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
         if 'status' not in df.columns:
             df.insert(0, 'status', 'Not applied')
         
-        required_columns = ['title', 'company', 'location', 'country', 'salary', 'url']
+        required_columns = ['status', 'title', 'company', 'location', 'country', 'salary', 'url']
         for col in required_columns:
             if col not in df.columns:
                 df[col] = 'N/A'
-            else:
-                df[col] = df[col].fillna('N/A').replace('', 'N/A')
-        
+
+        df = df[required_columns]
+        df = df.fillna('N/A').replace('', 'N/A')
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"outputs/job_offers_{timestamp}.xlsx"
         

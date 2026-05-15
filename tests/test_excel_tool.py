@@ -14,7 +14,8 @@ def test_excel_export_creates_file_and_checks_columns():
             "position": "DevOps Engineer",
             "company": "FunnyName Company",
             "location": "Paris",
-            "jobUrl": "https://somerandomandcoolurl.com/1"
+            "jobUrl": "https://somerandomandcoolurl.com/1",
+            "companyLogo": "http://logo.com"
         },
         {
             "position": "Backend Kotlin Developer",
@@ -23,7 +24,6 @@ def test_excel_export_creates_file_and_checks_columns():
     ]
     
     jobs_json = json.dumps(test_jobs)
-    
     result = tool._run(jobs_json)
     
     # check return message
@@ -36,9 +36,25 @@ def test_excel_export_creates_file_and_checks_columns():
     
     # check content
     df = pd.read_excel(filename, keep_default_na=False)
-    assert len(df) == 2
+    assert len(df.columns) == 7
+
     # check if status colum is created
     assert 'status' in df.columns
+    
+    # check if the tool drops unwanted columns
+    assert 'position' not in df.columns
+    assert 'joburl' not in df.columns
+    assert 'companylogo' not in df.columns
+
+    # checj if new columns are created with correct data
+    assert 'title' in df.columns
+    assert df.iloc[0]['title'] == "DevOps Engineer"
+    assert df.iloc[0]['url'] == "https://somerandomandcoolurl.com/1"
+
+    # check if the columns were deleted
+    assert 'position' not in df.columns
+    assert 'companylogo' not in df.columns
+
     # check if missing fields are filled with "N/A"'
     assert df.iloc[1]['company'] == 'N/A'
     
