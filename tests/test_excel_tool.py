@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 from src.tools.excel_tool import ExcelExportTool
+from openpyxl import load_workbook
 
 def test_excel_export_creates_file_and_checks_columns():
     # check if the tool creat an excel file with correct content"""
@@ -41,5 +42,29 @@ def test_excel_export_creates_file_and_checks_columns():
     # check if missing fields are filled with "N/A"'
     assert df.iloc[1]['company'] == 'N/A'
     
+    if os.path.exists(filename):
+        os.remove(filename)
+
+def test_excel_conditional_formatting_rules():
+    # check if the tool applies conditional formatting rules to the "status" column
+
+    tool = ExcelExportTool()
+    test_jobs = [{"position": "DevOps", "company": "FunnyName Company", "location": "Paris", "jobUrl": "url"}]
+    result = tool._run(json.dumps(test_jobs))
+    filename = result.split(": ")[1].split(" with")[0]
+
+    wb = load_workbook(filename)
+    ws = wb.active
+
+    assert len(ws.conditional_formatting) > 0
+
+    rules_found = []
+    for cf in ws.conditional_formatting:
+        for rule in cf.rules:
+            rules_found.append(rule.formula[0])
+
+    assert '"Applied"' in rules_found
+    assert '"Not applied"' in rules_found
+
     if os.path.exists(filename):
         os.remove(filename)
